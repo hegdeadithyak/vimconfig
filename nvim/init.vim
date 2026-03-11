@@ -1,112 +1,184 @@
 call plug#begin('~/.config/nvim/plugged')
 
-Plug 'github/copilot.vim'
-Plug 'numirias/semshi', { 'do': ':UpdateRemotePlugins' }
+" --- Theming ---
+Plug 'rebelot/kanagawa.nvim'       " Goldish-Black (Dragon)
+Plug 'EdenEast/nightfox.nvim'      " Bluish-Black (Carbonfox)
+Plug 'nvim-tree/nvim-web-devicons'
+
+" --- UI Enhancements ---
+Plug 'rcarriga/nvim-notify'        " Smooth notifications
+Plug 'stevearc/dressing.nvim'      " Better UI for inputs/selects
+Plug 'folke/noice.nvim'            " Premium Floating Command Bar
+Plug 'MunifTanjim/nui.nvim'        " UI Component library
+Plug 'nvim-lualine/lualine.nvim'   " Statusline
+Plug 'akinsho/bufferline.nvim'     " Visual tabs
+Plug 'nvimdev/dashboard-nvim'      " Pro start screen
+Plug 'lukas-reineke/indent-blankline.nvim' " Indent lines
+Plug 'j-hui/fidget.nvim'           " LSP progress
+Plug 'lewis6991/gitsigns.nvim'     " Git decorations
+Plug 'nvimdev/lspsaga.nvim'        " Floating docs and hover
+
+" --- Core Tools & Editing ---
+Plug 'nvim-tree/nvim-tree.lua'     " File Tree
+Plug 'nvim-lua/plenary.nvim'       " Utils
+Plug 'nvim-telescope/telescope.nvim', { 'tag': '0.1.5' }
+Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
+Plug 'numToStr/Comment.nvim'       " Commenting (gc)
+Plug 'mg979/vim-visual-multi'      " Multi-cursors (Ctrl-n)
+Plug 'tpope/vim-surround'          " Change surroundings
+
+" --- Coding Intelligence ---
+Plug 'neovim/nvim-lspconfig'
+Plug 'hrsh7th/nvim-cmp'
+Plug 'hrsh7th/cmp-nvim-lsp'
+Plug 'hrsh7th/cmp-buffer'
+Plug 'hrsh7th/cmp-path'
+Plug 'L3MON4D3/LuaSnip'
+Plug 'williamboman/mason.nvim'
+Plug 'williamboman/mason-lspconfig.nvim'
+Plug 'windwp/nvim-autopairs'
 
 call plug#end()
 
-"" Crazy things to make this all work: you need node (curl from website latest), manually pip update greenlet and pynvim, :UpdatePlugins :UpdateRemotePlugins
-
-set nocompatible
-
-" Not sure if I want line numbers
-"set number
+"" --- System Settings ---
+set number
+set relativenumber
 set signcolumn=yes
-
-
+set cursorline
+set termguicolors
 set clipboard=unnamedplus
-
+set mouse=a
+set scrolloff=10
+set fillchars=eob:\ 
 set tabstop=4
 set shiftwidth=4
 set expandtab
+set smartindent
 
-set path+=**
-set wildmenu
-command! MakeTags !ctags -R .
+"" --- Colorscheme Setup ---
+let g:kanagawa_variant = "dragon"
+silent! colorscheme kanagawa-dragon
 
-let g:netrw_banner=0
-let g:netrw_browse_split=4
-let g:netrw_altv=1
-let g:netrw_liststyle=3
+"" --- UI Customization (Lua) ---
+lua << EOF
+local function safe_require(m)
+    local ok, res = pcall(require, m)
+    return ok and res or nil
+end
 
-""Colorscheme
-set termguicolors
+-- Comment.nvim
+local comment = safe_require("Comment")
+if comment then comment.setup() end
 
-" local syntax file - set colors on a per-machine basis:
-" vim: tw=0 ts=4 sw=4
-" Vim color file
-" Maintainer:   Ron Aaron <ron@ronware.org>
-" Last Change:  2003 May 02
+-- Notify
+local notify = safe_require("notify")
+if notify then 
+    vim.notify = notify 
+    notify.setup({ background_colour = "#000000", render = "compact" })
+end
 
-set background=dark
-hi clear
-if exists("syntax_on")
-  syntax reset
-endif
+-- Noice (ULTRA STABLE: NO TREESITTER)
+local noice = safe_require("noice")
+if noice then
+    noice.setup({
+        cmdline = {
+            enabled = true,
+            view = "cmdline_popup", 
+            format = {
+                -- DISABLE 'lang = "vim"' to stop it from trying to highlight with TS
+                cmdline = { pattern = "^:", icon = "", lang = "" },
+            },
+        },
+        messages = { enabled = true, view = "notify" },
+        popupmenu = { enabled = true, backend = "nui" },
+        lsp = {
+            progress = { enabled = false },
+            override = {
+                ["vim.lsp.util.convert_input_to_markdown_lines"] = false,
+                ["vim.lsp.util.stylize_markdown"] = false,
+                ["cmp.entry.get_documentation"] = false,
+            },
+        },
+        presets = {
+            bottom_search = true,
+            command_palette = true,
+            long_message_to_split = true,
+            lsp_doc_border = true,
+        },
+    })
+end
 
-let g:colors_name = "elflord"
-hi Normal                                               guifg=Cyan guibg=#061a1a
-hi SignColumn                                                      guibg=#061a1a
-hi Comment      term=bold       ctermfg=Cyan            guifg=White
-hi Constant     term=underline  ctermfg=Cyan            guifg=White
-hi Special      term=bold       ctermfg=Red             guifg=Blue
-hi Identifier   term=underline  cterm=bold ctermfg=Cyan guifg=Blue
-hi Statement    term=bold       ctermfg=Yellow gui=bold guifg=Red
-hi PreProc      term=underline  ctermfg=LightBlue       guifg=Red
-hi Type         term=underline  ctermfg=LightGreen      guifg=Red gui=bold
-hi Function     term=bold       ctermfg=White           guifg=White
-hi Repeat       term=underline  ctermfg=White           guifg=Red
-hi Operator                     ctermfg=Red             guifg=Red
-hi Ignore                       ctermfg=black           guifg=bg
-hi Error        term=reverse ctermbg=Red ctermfg=White  guibg=Red guifg=#ff0000
-hi Todo term=standout ctermbg=Yellow ctermfg=Black guifg=Black guibg=Yellow gui=bold
-hi LineNr ctermfg=Blue guifg=Blue
+-- Lspsaga
+local saga = safe_require("lspsaga")
+if saga then saga.setup({ symbol_in_winbar = { enable = false }, lightbulb = { enable = false } }) end
 
-hi ParenHighlight ctermfg=magenta guifg=Blue
-match ParenHighlight /[\\\.\,\+\-\*\=(){}\[\]]/
+-- Lualine
+local lualine = safe_require('lualine')
+if lualine then lualine.setup { options = { theme = 'kanagawa', globalstatus = true } } end
 
+-- File Tree
+local nvim_tree = safe_require("nvim-tree")
+if nvim_tree then nvim_tree.setup() end
 
-" Common groups that link to default highlighting.
-" You can specify other highlighting easily.
-hi link String  Constant
-hi link Character       Constant
-hi link Number  Constant
-hi link Boolean Constant
-hi link Float           Number
-hi link Conditional     Repeat
-hi link Label           Statement
-hi link Keyword Statement
-hi link Exception       Statement
-hi link Include PreProc
-hi link Define  PreProc
-hi link Macro           PreProc
-hi link PreCondit       PreProc
-hi link StorageClass    Type
-hi link Structure       Type
-hi link Typedef Type
-hi link Tag             Special
-hi link SpecialChar     Special
-hi link Delimiter       Special
-hi link SpecialComment Special
-hi link Debug           Special
+-- Treesitter (CRITICAL: vim is EXCLUDED here)
+local ts_configs = safe_require('nvim-treesitter.configs')
+if ts_configs then
+    pcall(function()
+        ts_configs.setup {
+          ensure_installed = { "python", "lua", "bash", "javascript" },
+          auto_install = true,
+          highlight = { 
+            enable = true,
+            -- If vim highlighting is still causing issues, we block it here too
+            disable = { "vim" },
+          },
+          indent = { enable = true }
+        }
+    end)
+end
 
-syntax enable
-filetype plugin on
+-- Autocompletion
+local cmp = safe_require('cmp')
+if cmp then
+    cmp.setup({
+      mapping = cmp.mapping.preset.insert({
+        ['<C-Space>'] = cmp.mapping.complete(),
+        ['<CR>'] = cmp.mapping.confirm({ select = true }),
+        ['<Tab>'] = cmp.mapping.select_next_item(),
+        ['<S-Tab>'] = cmp.mapping.select_prev_item(),
+      }),
+      sources = { { name = 'nvim_lsp' }, { name = 'buffer' }, { name = 'path' } }
+    })
+end
 
+-- Extra Plugins
+if safe_require("ibl") then require("ibl").setup { indent = { char = "│" }, scope = { enabled = false } } end
+if safe_require("fidget") then require("fidget").setup() end
+if safe_require("gitsigns") then require("gitsigns").setup() end
+EOF
 
-let g:semshi#excluded_hl_groups = ['local', 'global', 'free', 'attribute']
+"" --- Mappings ---
+let mapleader = " "
+nnoremap <C-n> :NvimTreeToggle<CR>
+nnoremap <leader>ff <cmd>Telescope find_files<cr>
+nnoremap <leader>fg <cmd>Telescope live_grep<cr>
+nnoremap <Tab> :bnext<CR>
+nnoremap <S-Tab> :bprevious<CR>
 
-function MyCustomHighlights()
-    hi semshiImported        ctermfg=214 guifg=Gray cterm=bold gui=bold
-    hi semshiParameter       ctermfg=75  guifg=DarkCyan
-    hi semshiParameterUnused ctermfg=117 guifg=DarkCyan cterm=underline gui=underline
-    hi semshiBuiltin         ctermfg=207 guifg=LightGray
-    hi semshiSelf            ctermfg=249 guifg=DarkGreen
-    hi semshiUnresolved      ctermfg=226 guifg=#ffff00 cterm=underline gui=underline
-    hi semshiSelected        ctermfg=231 guifg=Green ctermbg=161 guibg=#061a1a gui=bold
+" --- Multi-Line Indenting ---
+xnoremap <Tab> >gv
+xnoremap <S-Tab> <gv
+vnoremap < <gv
+vnoremap > >gv
 
-    hi semshiErrorSign       ctermfg=231 guifg=Yellow ctermbg=160 guibg=#061a1a
-    hi semshiErrorChar       ctermfg=231 guifg=Yellow ctermbg=160 guibg=#061a1a
-    sign define semshiError text=E texthl=semshiErrorSign
-endfunction
-autocmd FileType python call MyCustomHighlights()
+" Quick Commenting (Leader + /)
+nmap <leader>/ gcc
+vmap <leader>/ gc
+
+" Saga mappings
+nnoremap K <cmd>Lspsaga hover_doc<cr>
+nnoremap <leader>ca <cmd>Lspsaga code_action<cr>
+nnoremap <leader>rn <cmd>Lspsaga rename<cr>
+
+" Clean UI
+set cmdheight=0

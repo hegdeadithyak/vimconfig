@@ -1,0 +1,16 @@
+# Neovim plugins
+plugged/
+
+# Treesitter parsers
+parser/
+*.so
+*.o
+*.a
+
+# Backup files
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
