@@ -151,6 +151,31 @@ if cmp then
     })
 end
 
+-- Telescope Setup
+local telescope = safe_require("telescope")
+if telescope then
+    telescope.setup({
+        defaults = {
+            layout_strategy = "horizontal",
+            layout_config = { prompt_position = "top" },
+            sorting_strategy = "ascending",
+            winblend = 10,
+        },
+        pickers = {
+            current_buffer_fuzzy_find = {
+                theme = "dropdown",
+                previewer = false,
+            },
+            live_grep = {
+                theme = "dropdown",
+            },
+            grep_string = {
+                theme = "dropdown",
+            },
+        },
+    })
+end
+
 -- Extra Plugins
 if safe_require("ibl") then require("ibl").setup { indent = { char = "│" }, scope = { enabled = false } } end
 if safe_require("fidget") then require("fidget").setup() end
@@ -162,6 +187,9 @@ let mapleader = " "
 nnoremap <C-n> :NvimTreeToggle<CR>
 nnoremap <leader>ff <cmd>Telescope find_files<cr>
 nnoremap <leader>fg <cmd>Telescope live_grep<cr>
+nnoremap <leader>fd <cmd>lua require('telescope.builtin').live_grep(require('telescope.themes').get_dropdown({ search_dirs = { vim.fn.expand('%:p:h') } }))<cr>
+nnoremap <leader>fw <cmd>Telescope grep_string<cr>
+nnoremap <leader>fs <cmd>Telescope current_buffer_fuzzy_find<cr>
 nnoremap <Tab> :bnext<CR>
 nnoremap <S-Tab> :bprevious<CR>
 
